@@ -1,0 +1,13 @@
+# A simple token transfer contract
+
+# Deploy with an initial balance
+let owner = "0xABCDEF"
+let balance = 1000
+
+# function to transfer tokens
+fn transfer(to, amount) {
+    send_tx(to, amount)
+    print "Transferred {amount} tokens to {to}"
+}
+
+transfer("0x123456", 50)

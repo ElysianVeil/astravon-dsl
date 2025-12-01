@@ -1,0 +1,8 @@
+# Encode and mutate a DNA sequence
+
+let sequence = "ATCGTTAAGG"
+let encoded = encode_dna(sequence)
+print "Encoded sequence: {encoded}"
+
+let mutated = mutate_dna(encoded, 0.05)
+print "Mutated sequence: {mutated}"

@@ -1,0 +1,59 @@
+astravon-dsl/
+│
+├── Cargo.toml                # Rust project manifest (dependencies, metadata)
+├── README.md                 # Overview of Astravon DSL
+├── LICENSE                   # Dynasty license (Astravonic Sovereign License)
+│
+├── src/                      # Core source code
+│   ├── main.rs                # Entry point for Astravon compiler/interpreter
+│   ├── lib.rs                 # Shared library code
+│   │
+│   ├── lexer/                 # Lexical analysis (turns source into tokens)
+│   │   ├── mod.rs
+│   │   └── tokenizer.rs
+│   │
+│   ├── parser/                # Syntax parsing (AST builder)
+│   │   ├── mod.rs
+│   │   └── grammar.rs
+│   │
+│   ├── ast/                   # Abstract Syntax Tree definitions
+│   │   └── nodes.rs
+│   │
+│   ├── semantics/             # Type checking, symbol resolution
+│   │   └── analyzer.rs
+│   │
+│   ├── codegen/               # Code generation (LLVM backend, Wasm)
+│   │   ├── llvm_backend.rs
+│   │   └── wasm_backend.rs
+│   │
+│   ├── runtime/               # Astravon Virtual Machine (AVM)
+│   │   ├── mod.rs
+│   │   └── executor.rs
+│   │
+│   └── stdlib/                # Astravon Standard Library
+│       ├── chain.rs           # Blockchain primitives
+│       ├── bio.rs             # DNA/biotech primitives
+│       ├── ai.rs              # AI/ML primitives
+│       └── realm.rs           # Game/Simulation primitives
+│
+├── examples/                  # Example Astravon DSL scripts
+│   ├── hello_world.avon       # First program
+│   ├── contract.avon          # Blockchain contract
+│   ├── dna_script.avon        # Biotech DNA encoding
+│   └── ai_reasoning.avon      # AI-native reasoning example
+│
+├── tests/                     # Unit and integration tests
+│   ├── lexer_tests.rs
+│   ├── parser_tests.rs
+│   ├── runtime_tests.rs
+│   └── codegen_tests.rs
+│
+├── docs/                      # Documentation + Astravon Scrolls
+│   ├── design.md              # Core principles & philosophy
+│   ├── syntax.md              # Astravon DSL syntax guide
+│   ├── avm.md                 # Astravon Virtual Machine spec
+│   └── stdlib.md              # Standard library documentation
+│
+└── scripts/                   # Build and helper scripts
+    ├── build.sh               # Build automation
+    └── test.sh                # Run test suites

@@ -1,0 +1,7 @@
+# Load a model and run inference
+
+let model = load_model("astravon_ai_v1")
+let input = "The House of Astravon shall..."
+let output = predict(model, input)
+
+print "Prediction: {output}"

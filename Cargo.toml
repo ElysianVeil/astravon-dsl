@@ -1,0 +1,9 @@
+[package]
+name = "astravon-dsl"
+version = "0.1.0"
+edition = "2024"
+license = "Astravonic-Sovereign-License"
+
+[dependencies]
+base64 = "0.22.1"
+inkwell = { version = "0.6.0", features = ["llvm13-0"] }

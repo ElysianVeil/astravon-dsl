@@ -1,0 +1,89 @@
+# Astravon DSL
+
+[![License: Astravonic Sovereign License](https://img.shields.io/badge/License-Astravonic%20Sovereign%20License-blue.svg)](./LICENSE)
+
+> **Astravon DSL** is a new domain-specific language created by House Astravon for building the next generation of intelligent, secure, and sovereign systems.  
+> It unifies **AI, blockchain, biotechnology, and simulation** development into one elegant syntax and runs on the **Astravon Virtual Machine (AVM)**.
+
+---
+
+## ✨ Vision
+
+Astravon DSL is not just another language.  
+It is the **sovereign tongue of computation** for the Astravon technological dynasty:
+
+- **Unified Domains** – Write AI reasoning, blockchain contracts, DNA encoding, and simulation code in one language.
+- **Sovereign Runtime** – Code runs on the Astravon Virtual Machine (AVM) for maximum determinism, security, and performance.
+- **Security by Default** – Memory safety, ethical use constraints, and formal verification built into the toolchain.
+- **AGI-Native** – Designed as the native reasoning language of Astravon AGI.
+
+---
+
+## 🗂 Project Structure
+
+astravon-dsl/
+├── Cargo.toml # Rust project manifest
+├── README.md # Overview of Astravon DSL
+├── LICENSE # Astravonic Sovereign License
+│
+├── src/ # Core source code
+│ ├── main.rs # Entry point for Astravon compiler/interpreter
+│ ├── lib.rs # Shared library code
+│ ├── lexer/ # Lexical analysis
+│ ├── parser/ # Syntax parsing
+│ ├── ast/ # Abstract Syntax Tree definitions
+│ ├── semantics/ # Type checking, symbol resolution
+│ ├── codegen/ # Code generation (LLVM / Wasm)
+│ ├── runtime/ # Astravon Virtual Machine (AVM)
+│ └── stdlib/ # Astravon Standard Library
+│
+├── examples/ # Example Astravon DSL scripts
+├── tests/ # Unit and integration tests
+├── docs/ # Documentation + Astravon Scrolls
+└── scripts/ # Build and helper scripts
+
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Rust 1.75+ (with `cargo`)
+- LLVM (if you plan to use the LLVM backend)
+- Wasmtime (if you plan to target WebAssembly)
+
+### Build
+```bash
+cargo build
+
+Run
+cargo run examples/hello_world.avon
+
+Test
+cargo test
+
+📖 Examples
+// examples/hello_world.avon
+print "Hello, Astravon!"
+Run it:
+
+
+cargo run examples/hello_world.avon
+📚 Documentation
+Design Principles
+
+Syntax Guide
+
+AVM Specification
+
+Standard Library
+
+📝 License & Attribution
+This project is licensed under the Astravonic Sovereign License 1.0.
+© 2025 House Astravon — All rights reserved.
+
+If you use or modify this work, include the following notice:
+
+Based on Astravon DSL © House Astravon — Licensed under the Astravonic Sovereign License 1.0.
+
+For proprietary or commercial licensing, contact sovereign@astravon.org.
