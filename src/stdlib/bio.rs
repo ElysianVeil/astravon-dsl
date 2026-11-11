@@ -1,5 +1,6 @@
 // src/stdlib/bio.rs
 use crate::runtime::{AVM, Value};
+use base64::Engine;
 // use std::env::args;
 
 pub fn register_bio_primitives(vm: &mut AVM) {
@@ -11,13 +12,13 @@ fn encode_dna(args: Vec<Value>) -> Value {
     // args: [sequence string]
     if let Value::Str(seq) = &args[0] {
         let encoded = seq.bytes().map(|b| b ^ 0b1010).collect::<Vec<u8>>();
-        Value::Str(base64::encode(encoded))
+        Value::Str(base64::engine::general_purpose::STANDARD.encode(encoded))
     } else {
         Value::Str("error".to_string())
     }
 }
 
-fn mutate_dna(args: Vec<Value>) -> Value {
+fn mutate_dna(_args: Vec<Value>) -> Value {
     // args: [encoded_sequence, mutation_rate]
     // stub
     Value::Str("mutated_sequence".to_string())

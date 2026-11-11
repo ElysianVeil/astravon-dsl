@@ -11,7 +11,6 @@ pub enum ParserError {
     EndOfInput,
 }
 
-
 pub type ParseResult<T> = Result<T, ParserError>;
 
 /// Main parser interface — turns a vector of tokens into an AST.

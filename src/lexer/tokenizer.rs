@@ -3,8 +3,10 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     Identifier(String),
-    Number(f64),
+    Integer(i64),
+    Float(f64),
     StringLiteral(String),
+    CharacterLiteral(char),
     Keyword(String),
     Symbol(char),
     Eof,
@@ -18,7 +20,6 @@ pub struct Token {
 }
 
 pub struct Lexer<'a> {
-    src: &'a str,
     chars: std::str::Chars<'a>,
     current: Option<char>,
     line: usize,
@@ -29,8 +30,8 @@ impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
         let mut chars = src.chars();
         let first = chars.next();
-        Lexer {
-            src,
+
+        Self {
             chars,
             current: first,
             line: 1,
@@ -47,42 +48,92 @@ impl<'a> Lexer<'a> {
                 self.column += 1;
             }
         }
+
         self.current = self.chars.next();
     }
 
-    pub fn next_token(&mut self) -> Token {
-        // skip whitespace
+    fn make_token(&self, kind: TokenKind, line: usize, column: usize) -> Token {
+        Token { kind, line, column }
+    }
+
+    pub fn next_token(&mut self) -> Result<Token, String> {
+        // Skip whitespace.
         while let Some(ch) = self.current {
             if ch.is_whitespace() {
                 self.advance();
-                continue;
+            } else {
+                break;
             }
-            break;
         }
 
+        let start_line = self.line;
+        let start_col = self.column;
+
         match self.current {
+            // String literals.
             Some('"') => {
-                // Start of a string literal
-                let start_col = self.column;
-                self.advance(); // skip opening quote
+                self.advance();
+
                 let mut value = String::new();
-                while let Some(c) = self.current {
-                    if c == '"' {
-                        self.advance(); // skip closing quote
-                        break;
+
+                loop {
+                    match self.current {
+                        Some('"') => {
+                            self.advance();
+                            break;
+                        }
+
+                        Some('\\') => {
+                            self.advance();
+
+                            let escaped = match self.current {
+                                Some('n') => '\n',
+                                Some('t') => '\t',
+                                Some('r') => '\r',
+                                Some('0') => '\0',
+                                Some('"') => '"',
+                                Some('\\') => '\\',
+
+                                Some(other) => {
+                                    return Err(format!(
+                                        "Invalid string escape '\\{}' at line {}",
+                                        other, self.line
+                                    ));
+                                }
+
+                                None => {
+                                    return Err(format!(
+                                        "Unterminated escape sequence at line {}",
+                                        self.line
+                                    ));
+                                }
+                            };
+
+                            value.push(escaped);
+                            self.advance();
+                        }
+
+                        Some('\n') | None => {
+                            return Err(format!(
+                                "Unterminated string literal at line {}, column {}",
+                                start_line, start_col
+                            ));
+                        }
+
+                        Some(ch) => {
+                            value.push(ch);
+                            self.advance();
+                        }
                     }
-                    value.push(c);
-                    self.advance();
                 }
-                Token {
-                    kind: TokenKind::StringLiteral(value),
-                    line: self.line,
-                    column: start_col,
-                }
+
+                Ok(self.make_token(TokenKind::StringLiteral(value), start_line, start_col))
             }
-            Some(ch) if ch.is_ascii_alphabetic() => {
-                let start_col = self.column;
+
+            // Identifiers and keywords.
+            Some(ch) if ch.is_ascii_alphabetic() || ch == '_' => {
                 let mut ident = String::new();
+
                 while let Some(c) = self.current {
                     if c.is_ascii_alphanumeric() || c == '_' {
                         ident.push(c);
@@ -91,69 +142,156 @@ impl<'a> Lexer<'a> {
                         break;
                     }
                 }
-                // Keyword detection
-                let keywords = ["print"]; // Add more DSL keywords here
+
+                let keywords = ["print", "true", "false", "null"];
+
                 let kind = if keywords.contains(&ident.as_str()) {
-                    TokenKind::Keyword(ident.clone())
+                    TokenKind::Keyword(ident)
                 } else {
-                    TokenKind::Identifier(ident.clone())
+                    TokenKind::Identifier(ident)
                 };
-                // you can add keyword detection here
-                Token {
-                    kind,
-                    line: self.line,
-                    column: start_col,
-                }
+
+                Ok(self.make_token(kind, start_line, start_col))
             }
+
+            // Numeric literals.
             Some(ch) if ch.is_ascii_digit() => {
-                let start_col = self.column;
-                let mut num = String::new();
+                let mut number = String::new();
+                let mut has_decimal = false;
+
                 while let Some(c) = self.current {
-                    if c.is_ascii_digit() || c == '.' {
-                        num.push(c);
+                    if c.is_ascii_digit() {
+                        number.push(c);
+                        self.advance();
+                    } else if c == '.' && !has_decimal {
+                        has_decimal = true;
+                        number.push(c);
                         self.advance();
                     } else {
                         break;
                     }
                 }
-                Token {
-                    kind: TokenKind::Number(num.parse::<f64>().unwrap_or(0.0)),
-                    line: self.line,
-                    column: start_col,
+
+                if has_decimal {
+                    let value = number.parse::<f64>().map_err(|_| {
+                        format!(
+                            "Invalid floating-point literal '{}' at line {}",
+                            number, start_line
+                        )
+                    })?;
+
+                    if !value.is_finite() {
+                        return Err(format!(
+                            "Floating-point literal out of range at line {}",
+                            start_line
+                        ));
+                    }
+
+                    Ok(self.make_token(TokenKind::Float(value), start_line, start_col))
+                } else {
+                    let value = number.parse::<i64>().map_err(|_| {
+                        format!(
+                            "Integer literal out of range '{}' at line {}",
+                            number, start_line
+                        )
+                    })?;
+
+                    Ok(self.make_token(TokenKind::Integer(value), start_line, start_col))
                 }
             }
-            Some(ch) => {
-                let tok = Token {
-                    kind: TokenKind::Symbol(ch),
-                    line: self.line,
-                    column: self.column,
-                };
+
+            // Character literals.
+            Some('\'') => {
                 self.advance();
-                tok
+
+                let character = match self.current {
+                    Some('\\') => {
+                        self.advance();
+
+                        let escaped = match self.current {
+                            Some('n') => '\n',
+                            Some('t') => '\t',
+                            Some('r') => '\r',
+                            Some('0') => '\0',
+                            Some('\'') => '\'',
+                            Some('\\') => '\\',
+
+                            Some(other) => {
+                                return Err(format!(
+                                    "Invalid character escape '\\{}' at line {}",
+                                    other, start_line
+                                ));
+                            }
+
+                            None => {
+                                return Err(format!(
+                                    "Unterminated character literal at line {}",
+                                    start_line
+                                ));
+                            }
+                        };
+
+                        self.advance();
+                        escaped
+                    }
+
+                    Some(ch) if ch != '\'' && ch != '\n' => {
+                        self.advance();
+                        ch
+                    }
+
+                    _ => {
+                        return Err(format!(
+                            "Invalid character literal at line {}, column {}",
+                            start_line, start_col
+                        ));
+                    }
+                };
+
+                if self.current != Some('\'') {
+                    return Err(format!(
+                        "Character literal must contain exactly one character at line {}",
+                        start_line
+                    ));
+                }
+
+                self.advance();
+
+                Ok(self.make_token(
+                    TokenKind::CharacterLiteral(character),
+                    start_line,
+                    start_col,
+                ))
             }
-            None => Token {
-                kind: TokenKind::Eof,
-                line: self.line,
-                column: self.column,
-            },
+
+            // Symbols.
+            Some(ch) => {
+                self.advance();
+
+                Ok(self.make_token(TokenKind::Symbol(ch), start_line, start_col))
+            }
+
+            // End of input.
+            None => Ok(self.make_token(TokenKind::Eof, start_line, start_col)),
         }
     }
 
-    /// Tokenize the entire source into a vector of Tokens
+    /// Tokenize the entire source.
     pub fn tokenize(src: &'a str) -> Result<Vec<Token>, String> {
         let mut lexer = Lexer::new(src);
         let mut tokens = Vec::new();
+
         loop {
-            let tok = lexer.next_token();
-            let is_eof = matches!(tok.kind, TokenKind::Eof);
-            tokens.push(tok);
+            let token = lexer.next_token()?;
+            let is_eof = matches!(token.kind, TokenKind::Eof);
+
+            tokens.push(token);
+
             if is_eof {
                 break;
             }
         }
-        for token in &tokens {
-            println!("Got token: {:?}", token);
-        }
+
         Ok(tokens)
     }
 }

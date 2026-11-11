@@ -1,19 +1,22 @@
 //! Astravon DSL CLI
-//! 
+//!
 //! This is the entry point for the Astravon DSL compiler/interpreter.
 //! It reads a `.avon` source file, compiles it (or interprets it),
 //! and either executes it on the AVM or outputs bytecode.
 
+use astravon_dsl::{VERSION, compile_source, run_source};
 use std::env;
 use std::fs;
-use astravon_dsl::{run_source, compile_source, VERSION};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
         eprintln!("Astravon DSL v{}", VERSION);
-        eprintln!("Usage: {} <file.avon> [--compile-only] [--output <file>]", args[0]);
+        eprintln!(
+            "Usage: {} <file.avon> [--compile-only] [--output <file>]",
+            args[0]
+        );
         std::process::exit(1);
     }
 
@@ -48,11 +51,10 @@ fn main() {
 
     let filename = filename.expect("No input file specified");
 
-    let source = fs::read_to_string(&filename)
-        .unwrap_or_else(|_| {
-            eprintln!("Could not read file: {}", filename);
-            std::process::exit(1);
-        });
+    let source = fs::read_to_string(&filename).unwrap_or_else(|_| {
+        eprintln!("Could not read file: {}", filename);
+        std::process::exit(1);
+    });
 
     if compile_only {
         match compile_source(&source) {
@@ -61,7 +63,10 @@ fn main() {
                     fs::write(&out, &bytecode).expect("Failed to write bytecode");
                     println!("✅ Bytecode written to {}", out);
                 } else {
-                    println!("✅ Compilation succeeded ({} bytes of bytecode)", bytecode.len());
+                    println!(
+                        "✅ Compilation succeeded ({} bytes of bytecode)",
+                        bytecode.len()
+                    );
                 }
             }
             Err(e) => {

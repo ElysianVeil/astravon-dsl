@@ -7,9 +7,14 @@ pub type NativeFn = fn(Vec<Value>) -> Value;
 #[derive(Debug, Clone)]
 pub enum OpCode {
     Nop,
+
     PushInt(i64),
+    PushFloat(f64),
+    PushBool(bool),
+    PushChar(char),
+    PushNull,
     PushString(String),
-    PushStr(String),
+
     Print,
     Add,
     // … add more as your DSL grows
@@ -30,18 +35,23 @@ pub struct AVM {
 #[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
+    Float(f64),
+    Bool(bool),
+    Char(char),
     Str(String),
+    Null,
     // later: AI objects, blockchain handles, DNA sequences, etc.
 }
-
 
 impl AVM {
     pub fn new(opcodes: Vec<OpCode>) -> Self {
         let instructions: Vec<Instruction> = opcodes
             .into_iter()
-            .map(|op| Instruction { opcode: op, args: vec![] })
+            .map(|op| Instruction {
+                opcode: op,
+                args: Vec::new(),
+            })
             .collect();
-
 
         Self {
             instructions,
@@ -52,14 +62,6 @@ impl AVM {
 
     pub fn load(&mut self, instructions: Vec<Instruction>) {
         self.instructions = instructions;
-    }
-
-    pub fn run(&mut self) {
-        let opcodes: Vec<OpCode> = self.instructions.iter().map(|instr| instr.opcode.clone()).collect();
-        let mut vm = AVM::new(opcodes); // or your OpCode vector
-        let bytecode = vec![]; // or whatever raw bytecode
-        let _ = crate::runtime::executor::execute(&mut vm, bytecode);
-
     }
 
     pub fn register_native(&mut self, name: &str, func: NativeFn) {

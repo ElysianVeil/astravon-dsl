@@ -1,51 +1,87 @@
 // src/runtime/executor.rs
+
 use crate::runtime::{AVM, OpCode, Value};
 
 pub fn execute(vm: &mut AVM, _bytecode: Vec<u8>) -> Result<(), String> {
-    let mut ip = 0; // instruction pointer
+    let mut ip = 0;
+
     while ip < vm.instructions.len() {
-        let instr = &vm.instructions[ip];
-        match &instr.opcode {
-            OpCode::Nop => {
-                ip += 1;
+        let instruction = vm.instructions[ip].clone();
+
+        match instruction.opcode {
+            OpCode::Nop => {}
+
+            OpCode::PushString(value) => {
+                vm.stack.push(Value::Str(value));
             }
-            OpCode::PushString(s) => vm.stack.push(Value::Str(s.to_string())),
-            OpCode::PushInt(i) => {
-                vm.stack.push(Value::Int(*i));
-                ip += 1;
+
+            OpCode::PushInt(value) => {
+                vm.stack.push(Value::Int(value));
             }
-            OpCode::PushStr(s) => {
-                vm.stack.push(Value::Str(s.to_string().clone()));
-                ip += 1;
+
+            OpCode::PushFloat(value) => {
+                vm.stack.push(Value::Float(value));
             }
+
+            OpCode::PushBool(value) => {
+                vm.stack.push(Value::Bool(value));
+            }
+
+            OpCode::PushChar(value) => {
+                vm.stack.push(Value::Char(value));
+            }
+
+            OpCode::PushNull => {
+                vm.stack.push(Value::Null);
+            }
+
             OpCode::Add => {
-                // Check stack before popping
                 if vm.stack.len() < 2 {
                     return Err(format!("Stack underflow on Add at ip={}", ip));
                 }
+
                 let b = vm.stack.pop().unwrap();
                 let a = vm.stack.pop().unwrap();
-                if let (Value::Int(ai), Value::Int(bi)) = (a.clone(), b.clone()) {
-                    vm.stack.push(Value::Int(ai + bi));
-                } else {
-                    return Err(format!("Type error on Add at ip={}: {:?}, {:?}",ip, a, b));
-                }
-                ip += 1;
-                
-            }
-            OpCode::Print => {
-                if let Some(v) = vm.stack.pop() {
-                    match v {
-                        Value::Str(ref s) => println!("{}", s),
-                        other => println!("{:?}", other),
+
+                match (a, b) {
+                    (Value::Int(a), Value::Int(b)) => {
+                        let result = a
+                            .checked_add(b)
+                            .ok_or_else(|| format!("Integer overflow on Add at ip={}", ip))?;
+
+                        vm.stack.push(Value::Int(result));
                     }
-                } else {
-                    eprintln!("Stack underflow on Print");
+
+                    (Value::Float(a), Value::Float(b)) => {
+                        vm.stack.push(Value::Float(a + b));
+                    }
+
+                    (a, b) => {
+                        return Err(format!("Type error on Add at ip={}: {:?} + {:?}", ip, a, b));
+                    }
                 }
-                ip += 1;
             }
-            // add your AI, blockchain, DNA, etc. opcodes here later
+
+            OpCode::Print => {
+                let value = vm
+                    .stack
+                    .pop()
+                    .ok_or_else(|| format!("Stack underflow on Print at ip={}", ip))?;
+
+                match value {
+                    Value::Str(value) => println!("{}", value),
+                    Value::Int(value) => println!("{}", value),
+                    Value::Float(value) => println!("{}", value),
+                    Value::Bool(value) => println!("{}", value),
+                    Value::Char(value) => println!("{}", value),
+                    Value::Null => println!("null"),
+                }
+            }
         }
+
+        // Advance after successfully executing the current instruction.
+        ip += 1;
     }
+
     Ok(())
 }

@@ -1,16 +1,17 @@
 //! Astravon DSL Core Library
-//! 
+//!
 //! This crate exposes the building blocks of the Astravon DSL
 //! so it can be embedded in other Rust applications or compiled
 //! into the Astravon Virtual Machine (AVM).
 
 // Make your internal modules visible here
+pub mod ast;
+pub mod bytecode;
+pub mod codegen;
 pub mod lexer;
 pub mod parser;
-pub mod ast;
-pub mod semantics;
-pub mod codegen;
 pub mod runtime;
+pub mod semantics;
 pub mod stdlib;
 
 // Re-exports for easy use
@@ -23,7 +24,6 @@ use crate::semantics::analyzer::Analyzer;
 use crate::semantics::analyzer::SemanticError;
 // use runtime::OpCode;
 
-
 impl From<ParserError> for String {
     fn from(e: ParserError) -> Self {
         format!("{:?}", e)
@@ -35,7 +35,6 @@ impl From<SemanticError> for String {
         format!("{:?}", e)
     }
 }
-
 
 /// Version info for the DSL
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -82,67 +81,68 @@ pub fn compile_source(source: &str) -> Result<Vec<u8>, String> {
     }
     println!("✅ Semantic analysis passed");
 
-    // 4️⃣ Codegen
-    println!("4️⃣ Generating bytecode...");
-    let bytecode = match codegen::llvm_backend::generate(&ast) {
-        Ok(bytes) => {
-            println!("✅ Bytecode generated: {} bytes", bytes.len());
-            bytes
-        }
-        Err(e) => {
-            eprintln!("❌ Codegen error: {:?}", e);
-            return Err(format!("Codegen failed: {:?}", e));
-        }
-    };
+    // // 4️⃣ Codegen
+    // println!("4️⃣ Generating bytecode...");
+    // let bytecode = match codegen::llvm_backend::generate(&ast) {
+    //     Ok(bytes) => {
+    //         println!("✅ Bytecode generated: {} bytes", bytes.len());
+    //         bytes
+    //     }
+    //     Err(e) => {
+    //         eprintln!("❌ Codegen error: {:?}", e);
+    //         return Err(format!("Codegen failed: {:?}", e));
+    //     }
+    // };
+
+    // 4. AVM Code Generation
+    println!("4️⃣ Generating AVM instructions...");
+
+    let instructions = codegen::avm_backend::compile_program(&ast)?;
+
+    println!("✅ Generated {} AVM instructions", instructions.len());
+
+    // 5. Bytecode Encoding
+    println!("5️⃣ Encoding AVM bytecode...");
+
+    let bytecode = bytecode::encoder::encode(&instructions)?;
+
+    println!("✅ AVM bytecode generated: {} bytes", bytecode.len());
 
     println!("🎉 Compilation finished successfully!");
+
     Ok(bytecode)
 }
 
-/// Run an Astravon DSL source string directly with stage logging.
+/// Compile and execute AstravonDSL source using the AVM.
 pub fn run_source(source: &str) -> Result<(), String> {
-    println!("🚀 Running source in interpret mode...");
+    println!("🚀 Starting AstravonDSL execution...");
 
-    // Compile first (includes tokenization, parsing, semantic, codegen)
+    // 1. Compile source into AVM bytecode.
     let bytecode = compile_source(source)?;
 
-    // Decode bytecode for the VM
-    fn decode_bytecode(bytes: &[u8]) -> Vec<OpCode> {
-        let mut ops = Vec::new();
-        let mut i = 0;
-        while i < bytes.len() {
-            match bytes[i] {
-                0x01 => { // PushStr
-                    let len = bytes[i + 1] as usize;
-                    let s = String::from_utf8(bytes[i + 2 .. i + 2 + len].to_vec())
-                        .expect("Invalid UTF-8 in string literal");
-                    ops.push(OpCode::PushStr(s));
-                    i += 2 + len;
-                }
-                0x02 => { // Print
-                    ops.push(OpCode::Print);
-                    i += 1;
-                }
-                _ => panic!("Unknown opcode 0x{:02X}", bytes[i]),
-            }
-        }
-        ops
-    }
+    // 2. Decode bytecode into AVM instructions.
+    println!("6️⃣ Decoding AVM bytecode...");
 
-    println!("5️⃣ Decoding bytecode for VM...");
-    let opcodes = decode_bytecode(&bytecode);
-    println!("✅ {} opcodes decoded", opcodes.len());
+    let opcodes = bytecode::decoder::decode(&bytecode)?;
 
-    // Execute
-    println!("6️⃣ Executing on AVM...");
+    println!("✅ Successfully decoded {} instructions", opcodes.len());
+
+    // 3. Initialize AVM.
+    println!("7️⃣ Initializing AVM...");
+
     let mut vm = runtime::AVM::new(opcodes);
-    let _ = runtime::executor::execute(&mut vm, bytecode);
 
-    println!("🎉 Execution finished successfully!");
+    // 4. Execute.
+    println!("8️⃣ Executing AVM instructions...");
+
+    runtime::executor::execute(&mut vm, bytecode)?;
+
+    println!("🎉 Execution completed successfully!");
+
     Ok(())
 }
 
-pub fn strip_comments(mut tokens: Vec<Token>) -> Vec<Token> {
+pub fn strip_comments(tokens: Vec<Token>) -> Vec<Token> {
     let mut filtered = Vec::new();
     let mut skip_line = false;
     let mut current_line = 0;

@@ -2,4 +2,4 @@
 
 pub mod tokenizer;
 
-pub use tokenizer::{Token, TokenKind, Lexer};
+pub use tokenizer::{Lexer, Token, TokenKind};

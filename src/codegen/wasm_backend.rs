@@ -26,8 +26,7 @@ impl WasmBackend {
         match stmt {
             Statement::Print(_expr) => {
                 // encode WASM instructions to print string
-            }
-            // ...
+            } // ...
         }
     }
 }

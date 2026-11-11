@@ -12,7 +12,7 @@ fn spawn_entity(args: Vec<Value>) -> Value {
     Value::Str("entity_id_42".to_string())
 }
 
-fn advance_tick(args: Vec<Value>) -> Value {
+fn advance_tick(_args: Vec<Value>) -> Value {
     println!("Advancing simulation tick");
     Value::Int(1)
 }

@@ -1,13 +1,10 @@
-// src/codegen/llvm_backend.rs
+use crate::ast::nodes::{Expression, Program, Statement};
 
-use crate::ast::nodes::{Program, Statement, Expression};
-use inkwell::context::Context;  // Inkwell = Rust LLVM bindings
 use inkwell::builder::Builder;
+use inkwell::context::Context;
 use inkwell::module::Module;
-use inkwell::values::{BasicValueEnum};
-// use inkwell::execution_engine::ExecutionEngine;
 use inkwell::targets::{InitializationConfig, Target};
-// use inkwell::AddressSpace;
+use inkwell::values::BasicValueEnum;
 
 pub struct LLVMBackend<'ctx> {
     context: &'ctx Context,
@@ -19,116 +16,112 @@ impl<'ctx> LLVMBackend<'ctx> {
     pub fn new(name: &str, context: &'ctx Context) -> Self {
         let module = context.create_module(name);
         let builder = context.create_builder();
-        Self { context, module, builder }
+
+        Self {
+            context,
+            module,
+            builder,
+        }
     }
 
-    pub fn compile_program(&mut self, program: &Program) {
-        // Create the 'main' function
+    pub fn compile_program(&mut self, program: &Program) -> Result<(), String> {
         let i32_type = self.context.i32_type();
-        let fn_type = i32_type.fn_type(&[], false);
-        let main_func = self.module.add_function("main", fn_type, None);
+        let function_type = i32_type.fn_type(&[], false);
 
-        // Create entry block and position builder there
-        let entry_block = self.context.append_basic_block(main_func, "entry");
+        let main_function = self.module.add_function("main", function_type, None);
+
+        let entry_block = self.context.append_basic_block(main_function, "entry");
+
         self.builder.position_at_end(entry_block);
 
-        // Compile each statement into LLVM IR
-        for stmt in &program.statements {
-            let _ = self.compile_statement(stmt);
+        for statement in &program.statements {
+            self.compile_statement(statement)?;
         }
 
-        // Return 0 from main
-        let _ = self.builder.build_return(Some(&i32_type.const_int(0, false)));
+        self.builder
+            .build_return(Some(&i32_type.const_int(0, false)))
+            .map_err(|error| format!("Failed to build return instruction: {:?}", error))?;
+
+        Ok(())
     }
 
-    fn compile_statement(&mut self, stmt: &Statement) -> Result<BasicValueEnum<'ctx>, String> {
-        match stmt {
-            Statement::Print(expr) => {
-                let c_string_type = self.context.i8_type().ptr_type(0.into());
+    fn compile_statement(&mut self, statement: &Statement) -> Result<(), String> {
+        match statement {
+            Statement::Print(expression) => {
+                let string_type = self.context.i8_type().ptr_type(0.into());
 
-                // Declare external "puts" function if not already declared
-                let puts_func = self.module.get_function("puts").unwrap_or_else(|| {
-                    let puts_type = self.context.i32_type().fn_type(&[c_string_type.into()], false);
+                // Declare puts if it does not already exist.
+                let puts_function = self.module.get_function("puts").unwrap_or_else(|| {
+                    let puts_type = self
+                        .context
+                        .i32_type()
+                        .fn_type(&[string_type.into()], false);
+
                     self.module.add_function("puts", puts_type, None)
                 });
 
-                // Compile expression to LLVM value
-                let string_val = self.compile_expression(&Expression::Literal(expr.clone()))    
-                    .map_err(|e| format!("Error compiling expression in Print: {}", e))?;
+                let value = self.compile_expression(expression)?;
 
-                // Build call to puts
-                let call = self.builder.build_call(puts_func, &[string_val.into()], "call_puts")
-                    .expect("LLVM build_call failed");
-                Ok(call.try_as_basic_value().left().unwrap_or_else(|| {
-                    panic!("puts() did not return a BasicValueEnum")
-                }))
-            // Add other statement kinds here
-            }
-        }
-    }
-    
+                self.builder
+                    .build_call(puts_function, &[value.into()], "call_puts")
+                    .map_err(|error| format!("Failed to build puts call: {:?}", error))?;
 
-
-
-    fn compile_expression(&mut self, expr: &Expression) -> Result<BasicValueEnum<'ctx>, String> {
-        match expr {
-            Expression::Literal(text) => {
-                // Generate a unique name for each string literal
-                static mut COUNTER: usize = 0;
-                let name = unsafe {
-                    let n = COUNTER;
-                    COUNTER += 1;
-                    format!("str_{}", n)
-                };
-
-                let gv = self.builder.build_global_string_ptr(text, &name)
-                    .map_err(|_| format!("Failed to create global string literal '{}'", text))?;
-                Ok(gv.as_pointer_value().into())
+                Ok(())
             }
         }
     }
 
+    fn compile_expression(
+        &mut self,
+        expression: &Expression,
+    ) -> Result<BasicValueEnum<'ctx>, String> {
+        // Convert the current primitive expression into printable text.
+        let text = match expression {
+            Expression::StringLiteral(value) => value.clone(),
+            Expression::IntegerLiteral(value) => value.to_string(),
+            Expression::FloatLiteral(value) => value.to_string(),
+            Expression::BooleanLiteral(value) => value.to_string(),
+            Expression::CharacterLiteral(value) => value.to_string(),
+            Expression::NullLiteral => "null".to_string(),
+        };
 
-    pub fn write_ir_to_file(&self, path: &str) {
-        self.module.print_to_file(path).unwrap();
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+        let name = format!("str_{}", COUNTER.fetch_add(1, Ordering::Relaxed));
+
+        let global_string = self
+            .builder
+            .build_global_string_ptr(&text, &name)
+            .map_err(|error| format!("Failed to create global string: {:?}", error))?;
+
+        Ok(global_string.as_pointer_value().into())
+    }
+
+    pub fn ir_string(&self) -> String {
+        self.module.print_to_string().to_string()
+    }
+
+    pub fn write_ir_to_file(&self, path: &str) -> Result<(), String> {
+        self.module
+            .print_to_file(path)
+            .map_err(|error| format!("Failed to write LLVM IR to {}: {:?}", path, error))
     }
 }
 
 pub fn initialize_llvm() {
     Target::initialize_native(&InitializationConfig::default())
-        .expect("Failed to initialize native target");
+        .expect("Failed to initialize native LLVM target");
 }
 
-pub fn generate(ast: &Program) -> Result<Vec<u8>, String> {
+/// Generate LLVM Intermediate Representation from an AstravonDSL AST.
+pub fn generate_ir(ast: &Program) -> Result<String, String> {
     let context = Context::create();
-    let mut backend = super::llvm_backend::LLVMBackend::new("module", &context);
 
-    // Compile the program to LLVM IR
-    backend.compile_program(ast);
+    let mut backend = LLVMBackend::new("astravon_module", &context);
 
-    // Optionally, write IR to file for inspection
-    backend.write_ir_to_file("output.ll");
+    backend.compile_program(ast)?;
 
-    // --- AVM bytecode path ---
-    let mut bytecode = Vec::new();
-
-    for stmt in &ast.statements {
-        match stmt {
-            Statement::Print(text) => {
-                // 0x01 = PushStr (custom opcode)
-                bytecode.push(0x01);
-                let bytes = text.as_bytes();
-                bytecode.push(bytes.len() as u8); // length prefix
-                bytecode.extend_from_slice(bytes);
-                // Example AVM opcode for Print: 0x02
-                bytecode.push(0x02);
-                // Optionally: append string bytes or an index if using a string table
-                // Here we keep it simple
-            }
-            // _ => {}
-            // Add more statement kinds here
-        }
-    }
-
-    Ok(bytecode)
+    Ok(backend.ir_string())
 }

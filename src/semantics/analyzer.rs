@@ -1,26 +1,29 @@
 // src/semantics/analyzer.rs
 
-use crate::ast::nodes::{Program, Statement, Expression};
+use crate::ast::nodes::{Expression, Program, Statement};
 use std::collections::HashMap;
 
-/// Represents the type of a value in your DSL.
+/// Represents the type of a value in AstravonDSL.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     String,
     Int,
+    Float,
     Bool,
+    Char,
+    Null,
     Void,
     Unknown,
 }
 
-/// Represents a symbol (variable or function) in scope.
+/// Represents a variable or function in the symbol table.
 #[derive(Debug, Clone)]
 pub struct Symbol {
     pub name: String,
     pub ty: Type,
 }
 
-/// The semantic analyzer’s state (symbol table, etc.)
+/// Semantic analyzer state.
 pub struct Analyzer {
     pub symbols: HashMap<String, Symbol>,
 }
@@ -28,59 +31,63 @@ pub struct Analyzer {
 #[derive(Debug)]
 pub enum SemanticError {
     UndeclaredVariable(String),
+
     TypeMismatch { expected: Type, found: Type },
+
+    UnsupportedExpression(String),
 }
 
-/// The result type for semantic analysis.
 pub type SemanticResult<T> = Result<T, SemanticError>;
 
 impl Analyzer {
-    /// Create a new Analyzer with an empty symbol table.
+    /// Create a new semantic analyzer.
     pub fn new() -> Self {
-        Analyzer {
+        Self {
             symbols: HashMap::new(),
         }
     }
 
-    /// Entry point: analyze a whole program AST.
+    /// Analyze an entire program.
     pub fn analyze_program(&mut self, program: &Program) -> SemanticResult<()> {
-        for stmt in &program.statements {
-            self.analyze_statement(stmt)?;
+        for statement in &program.statements {
+            self.analyze_statement(statement)?;
         }
+
         Ok(())
     }
 
-    fn analyze_statement(&mut self, stmt: &Statement) -> SemanticResult<()> {
-        match stmt {
-            Statement::Print(expr) => {
-                let ty = self.analyze_expression(&Expression::Literal(expr.clone()))?;
-                // Print can take any type, but you could restrict it:
-                if ty != Type::String {
-                    return Err(SemanticError::TypeMismatch {
-                        expected: Type::String,
-                        found: ty,
-                    });
-                }
+    /// Analyze an individual statement.
+    fn analyze_statement(&mut self, statement: &Statement) -> SemanticResult<()> {
+        match statement {
+            Statement::Print(expression) => {
+                let _ty = self.analyze_expression(expression)?;
+
+                // All currently supported primitive values are printable.
                 Ok(())
             }
-            // Add other statement kinds here
         }
     }
 
-    fn analyze_expression(&mut self, expr: &Expression) -> SemanticResult<Type> {
-        match expr {
-            Expression::Literal(lit) => {
-                // crude: if literal looks numeric, return Int; else String
-                if lit.parse::<i64>().is_ok() {
-                    Ok(Type::Int)
-                } else if lit.parse::<f64>().is_ok() {
-                    Ok(Type::Int) // Or create a Float type if you like
-                } else {
-                    Ok(Type::String)
-                }
+    /// Determine the semantic type of an expression.
+    fn analyze_expression(&mut self, expression: &Expression) -> SemanticResult<Type> {
+        match expression {
+            Expression::StringLiteral(_) => Ok(Type::String),
 
-            }
-            // Add more: variable references, math, function calls
+            Expression::IntegerLiteral(_) => Ok(Type::Int),
+
+            Expression::FloatLiteral(_) => Ok(Type::Float),
+
+            Expression::BooleanLiteral(_) => Ok(Type::Bool),
+
+            Expression::CharacterLiteral(_) => Ok(Type::Char),
+
+            Expression::NullLiteral => Ok(Type::Null),
         }
+    }
+}
+
+impl Default for Analyzer {
+    fn default() -> Self {
+        Self::new()
     }
 }
