@@ -50,7 +50,6 @@ impl<'ctx> LLVMBackend<'ctx> {
             Statement::Print(expression) => {
                 let string_type = self.context.i8_type().ptr_type(0.into());
 
-                // Declare puts if it does not already exist.
                 let puts_function = self.module.get_function("puts").unwrap_or_else(|| {
                     let puts_type = self
                         .context
@@ -68,6 +67,43 @@ impl<'ctx> LLVMBackend<'ctx> {
 
                 Ok(())
             }
+
+            Statement::Let { .. } | Statement::Assignment { .. } => {
+                Err("LLVM variable compilation is not implemented yet".to_string())
+            }
+
+            Statement::If { .. } => {
+                Err("LLVM conditional compilation is not implemented yet".to_string())
+            }
+
+            Statement::While { .. } => {
+                Err("LLVM while loop compilation is not implemented yet".to_string())
+            }
+
+            Statement::For { .. } => {
+                Err("LLVM for loop compilation is not implemented yet".to_string())
+            }
+
+            Statement::Break => {
+                Err("LLVM break statement compilation is not implemented yet".to_string())
+            }
+
+            Statement::Continue => {
+                Err("LLVM continue statement compilation is not implemented yet".to_string())
+            }
+
+            Statement::Function { name, .. } => Err(format!(
+                "LLVM function compilation is not implemented yet: {}",
+                name
+            )),
+
+            Statement::Return(_) => {
+                Err("LLVM return compilation is not implemented yet".to_string())
+            }
+
+            Statement::Expression(_) => {
+                Err("LLVM expression-statement compilation is not implemented yet".to_string())
+            }
         }
     }
 
@@ -78,11 +114,45 @@ impl<'ctx> LLVMBackend<'ctx> {
         // Convert the current primitive expression into printable text.
         let text = match expression {
             Expression::StringLiteral(value) => value.clone(),
+            Expression::InterpolatedString(_) => {
+                return Err(
+                    "LLVM string interpolation compilation is not implemented yet".to_string(),
+                );
+            }
             Expression::IntegerLiteral(value) => value.to_string(),
             Expression::FloatLiteral(value) => value.to_string(),
             Expression::BooleanLiteral(value) => value.to_string(),
             Expression::CharacterLiteral(value) => value.to_string(),
             Expression::NullLiteral => "null".to_string(),
+            Expression::Identifier(name) => {
+                return Err(format!(
+                    "LLVM variable loading is not implemented: {}",
+                    name
+                ));
+            }
+
+            Expression::Binary { .. } => {
+                return Err("LLVM binary expression compilation is not implemented".to_string());
+            }
+
+            Expression::Unary { .. } => {
+                return Err("LLVM unary expression compilation is not implemented".to_string());
+            }
+
+            Expression::Array { .. } => {
+                return Err("LLVM array expression compilation is not implemented".to_string());
+            }
+
+            Expression::Match { .. } => {
+                return Err("LLVM match expression compilation is not implemented".to_string());
+            }
+
+            Expression::Call { name, .. } => {
+                return Err(format!(
+                    "LLVM function-call compilation is not implemented yet: {}",
+                    name
+                ));
+            }
         };
 
         use std::sync::atomic::{AtomicUsize, Ordering};

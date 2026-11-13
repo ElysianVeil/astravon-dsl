@@ -1,0 +1,118 @@
+
+# ============================================
+# ASTRAVON DSL - FEATURE INTEGRATION TEST
+# ============================================
+
+# 1. Basic output
+print "Hello Astravon!";
+print "Testing the Astravon Virtual Machine.";
+
+# 2. Primitive data types
+let age: Int = 20;
+let height: Float = 1.68;
+let active: Bool = true;
+let initial: Char = 'A';
+let empty: Null = null;
+
+print age;
+print height;
+print active;
+print initial;
+print empty;
+
+# 3. Type inference
+let count = 10;
+let temperature = 36.5;
+let language = "Astravon";
+let enabled = false;
+
+print count;
+print temperature;
+print language;
+print enabled;
+
+# 4. Variable reassignment
+let score: Int = 50;
+score = 75;
+
+print score;
+
+# 5. Arithmetic operations
+let a = 20;
+let b = 5;
+
+print a + b;
+print a - b;
+print a * b;
+print a / b;
+print a % b;
+
+# 6. Operator precedence
+print 5 + 10 * 2;
+print (5 + 10) * 2;
+print 100 - 20 / 4;
+
+# 7. Floating-point arithmetic
+let x = 10.5;
+let y = 2.5;
+
+print x + y;
+print x - y;
+print x * y;
+print x / y;
+
+# 8. Comparison operations
+let first = 10;
+let second = 20;
+
+print first == second;
+print first != second;
+print first < second;
+print first > second;
+print first <= second;
+print first >= second;
+
+# 9. Logical operations
+let condition_a = true;
+let condition_b = false;
+
+print condition_a && condition_b;
+print condition_a || condition_b;
+print !condition_a;
+print !condition_b;
+
+# 10. Unary negation
+let positive = 25;
+print -positive;
+print -10.5;
+
+# 11. Combined expressions
+let result = (10 + 5) * 2 - 4;
+print result;
+
+let valid = (age >= 18) && active;
+print valid;
+
+# 12. Variable updates using expressions
+let balance = 1000;
+balance = balance - 250;
+balance = balance + 100;
+
+print balance;
+
+# 13. Character and string handling
+let first_letter = 'A';
+let second_letter = 'V';
+let message = "Astravon";
+
+print first_letter;
+print second_letter;
+print message;
+
+# 14. Null handling
+let missing_value = null;
+print missing_value;
+
+# ============================================
+# END OF TEST PROGRAM
+# ============================================

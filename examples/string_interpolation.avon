@@ -1,0 +1,25 @@
+# AstravonDSL String Interpolation
+
+let name: String = "Astravon";
+let age: Int = 20;
+let height: Float = 1.68;
+let active: Bool = true;
+let initial: Char = 'A';
+
+print "Welcome to {name}!";
+print "Age: {age}";
+print "Next year: {age + 1}";
+print "Height: {height}";
+print "Active: {active}";
+print "Initial: {initial}";
+print "Calculation: {10 * 5}";
+print "Combined: {age + 10 * 2}";
+
+let message = "Global";
+
+if true {
+    let message = "Local";
+    print message;
+}
+
+print message;

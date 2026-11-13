@@ -1,23 +1,70 @@
 // src/runtime/mod.rs
+
 pub mod executor;
 
 use std::collections::HashMap;
+
 pub type NativeFn = fn(Vec<Value>) -> Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OpCode {
     Nop,
 
+    // Values
     PushInt(i64),
     PushFloat(f64),
     PushBool(bool),
     PushChar(char),
     PushNull,
     PushString(String),
+    BuildString(usize),
 
-    Print,
+    // Variables
+    LoadVar(String),
+    DefineVar(String),
+    StoreVar(String),
+
+    // Control flow and functions
+    Jump(usize),
+    JumpIfFalse(usize),
+    Call {
+        target: usize,
+        argument_count: usize,
+    },
+    Return,
+    Pop,
+
+    // Arithmetic
     Add,
-    // … add more as your DSL grows
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
+
+    // Comparisons
+    Equal,
+    NotEqual,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+
+    // Logical and unary operations
+    And,
+    Or,
+    Negate,
+    Not,
+
+    // Output
+    Print,
+
+    // Scope management
+    EnterScope,
+    ExitScope,
+
+    CreateArray(usize),
+    ArrayLength,
+    ArrayGet,
 }
 
 #[derive(Debug, Clone)]
@@ -29,26 +76,28 @@ pub struct Instruction {
 pub struct AVM {
     pub instructions: Vec<Instruction>,
     pub stack: Vec<Value>,
+    pub variables: HashMap<String, Value>,
     pub native_functions: HashMap<String, NativeFn>,
+    pub scopes: Vec<HashMap<String, Value>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Int(i64),
     Float(f64),
     Bool(bool),
     Char(char),
     Str(String),
+    Array(Vec<Value>),
     Null,
-    // later: AI objects, blockchain handles, DNA sequences, etc.
 }
 
 impl AVM {
     pub fn new(opcodes: Vec<OpCode>) -> Self {
-        let instructions: Vec<Instruction> = opcodes
+        let instructions = opcodes
             .into_iter()
-            .map(|op| Instruction {
-                opcode: op,
+            .map(|opcode| Instruction {
+                opcode,
                 args: Vec::new(),
             })
             .collect();
@@ -56,12 +105,17 @@ impl AVM {
         Self {
             instructions,
             stack: Vec::new(),
+            variables: HashMap::new(),
+            scopes: Vec::new(),
             native_functions: HashMap::new(),
         }
     }
 
     pub fn load(&mut self, instructions: Vec<Instruction>) {
         self.instructions = instructions;
+        self.stack.clear();
+        self.variables.clear();
+        self.scopes.clear();
     }
 
     pub fn register_native(&mut self, name: &str, func: NativeFn) {
